@@ -1,5 +1,5 @@
 // src/components/SubmissionHistory.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Trash2, Copy, ChevronDown } from 'lucide-react';
 import useCppStore from '../store/codeStore';
 import '../styles/SubmissionHistory.css';

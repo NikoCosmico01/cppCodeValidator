@@ -2,11 +2,6 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 export async function checkCode(code, fileName = 'main.cpp') {
-  console.log('API: Sending code to server...', { 
-    codeLength: code.length, 
-    fileName,
-    url: `${API_BASE_URL}/check`
-  });
 
   try {
     const response = await fetch(`${API_BASE_URL}/check`, {
@@ -27,38 +22,38 @@ export async function checkCode(code, fileName = 'main.cpp') {
     }
 
     const data = await response.json();
-    console.log('API: Received response:', data);
+    //console.log('API: Received Response:', data);
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    //console.error('API Error:', error);
     throw error;
   }
 }
 
 export async function checkHealth() {
-  console.log('API: Checking server health...');
+  console.log('API: Checking Server Health...');
   try {
     const response = await fetch(`${API_BASE_URL}/health`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    console.log('API: Server health OK:', data);
+    console.log('API: Server Health OK:', data);
     return data;
   } catch (error) {
-    console.error('Health check failed:', error);
+    console.error('Health Check Failed:', error);
     throw error;
   }
 }
 
 export async function getVersion() {
-  console.log('API: Getting cppcheck version...');
+  console.log('API: Getting cppcheck Version...');
   try {
     const response = await fetch(`${API_BASE_URL}/version`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    console.log('API: Version info:', data);
+    console.log('API: Version Info:', data);
     return data;
   } catch (error) {
-    console.error('Version fetch failed:', error);
+    console.error('Version Fetch Failed:', error);
     throw error;
   }
 }
