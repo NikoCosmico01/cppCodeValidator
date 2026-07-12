@@ -192,7 +192,7 @@ function CodeEditor({ serverOnline }) {
             onChange={(e) => setCurrentCode(e.target.value)}
             onScroll={syncGutter}
             onKeyDown={handleKeyDown}
-            placeholder={'// Paste or write C++ code here, then press Ctrl+Enter'}
+            placeholder={'// Paste or Write C++ code Here, then press Ctrl+Enter'}
             spellCheck={false}
             wrap="off"
             aria-label="C++ source code"

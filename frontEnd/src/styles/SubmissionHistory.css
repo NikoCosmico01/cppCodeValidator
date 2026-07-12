@@ -2,7 +2,7 @@
 .history-rail {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 1px;
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 180px);
@@ -30,7 +30,7 @@
   color: var(--muted);
   padding: 1px 8px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 1px;
 }
 
 .btn-small {

@@ -53,7 +53,7 @@ function AppContainer() {
             <span className="chip chip-version">{cppcheck.version}</span>
           )}
           {cppcheck.missing && (
-            <span className="chip chip-missing">cppcheck not found</span>
+            <span className="chip chip-missing">cppcheck Not Found</span>
           )}
           <span className={`chip chip-server ${serverStatus}`}>
             <span className="dot" aria-hidden="true" />

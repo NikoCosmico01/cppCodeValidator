@@ -36,25 +36,6 @@
   color: var(--muted);
 }
 
-.brand-cursor {
-  width: 9px;
-  height: 18px;
-  background: var(--text);
-  display: inline-block;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .brand-cursor {
-    animation: blink 1.2s steps(2, start) infinite;
-  }
-
-  @keyframes blink {
-    to {
-      visibility: hidden;
-    }
-  }
-}
-
 .header-status {
   display: flex;
   align-items: center;
@@ -68,7 +49,7 @@
   gap: 6px;
   padding: 4px 10px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 1px;
   font-family: var(--mono);
   font-size: 12px;
   color: var(--muted);
@@ -82,7 +63,7 @@
 .chip-server .dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 1px;
   background: var(--faint);
 }
 
@@ -107,7 +88,7 @@
   margin-bottom: 20px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 1px;
   font-family: var(--mono);
   font-size: 13px;
   color: var(--faint);

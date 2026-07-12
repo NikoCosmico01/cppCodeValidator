@@ -36,7 +36,6 @@ function SubmissionHistory() {
       {submissions.length === 0 ? (
         <div className="history-empty">
           <p className="empty-comment">{'// nothing analyzed yet'}</p>
-          <p>Run your first check and it will appear here.</p>
         </div>
       ) : (
         <ul className="history-list">

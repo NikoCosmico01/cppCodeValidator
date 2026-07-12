@@ -9,7 +9,7 @@
 .editor-card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 1px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -30,7 +30,7 @@
   padding: 7px 10px;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 1px;
   font-family: var(--mono);
   font-size: 13px;
   color: var(--text);
@@ -149,7 +149,7 @@
   gap: 8px;
   padding: 10px 14px;
   border: 1px solid color-mix(in srgb, var(--sev-error) 40%, transparent);
-  border-radius: var(--radius);
+  border-radius: 1px;
   background: color-mix(in srgb, var(--sev-error) 8%, transparent);
   color: var(--sev-error);
   font-size: 13px;

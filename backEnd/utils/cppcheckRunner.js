@@ -51,8 +51,8 @@ class CppcheckRunner {
         clearTimeout(timer);
         const err = new Error(
           error.code === 'ENOENT'
-            ? `cppcheck was not found at "${this.cppcheckPath}". Install it or set CPPCHECK_PATH.`
-            : `Failed to execute cppcheck: ${error.message}`
+            ? `cppcheck was NOT Found at "${this.cppcheckPath}". Install it or set CPPCHECK_PATH.`
+            : `Failed to Execute cppcheck: ${error.message}`
         );
         err.notFound = error.code === 'ENOENT';
         reject(err);
@@ -121,7 +121,7 @@ class CppcheckRunner {
       child.on('error', (error) => {
         const err = new Error(
           error.code === 'ENOENT'
-            ? `cppcheck was not found at "${this.cppcheckPath}". Install it or set CPPCHECK_PATH.`
+            ? `cppcheck was NOT Found at "${this.cppcheckPath}". Install it or set CPPCHECK_PATH.`
             : error.message
         );
         err.notFound = error.code === 'ENOENT';
