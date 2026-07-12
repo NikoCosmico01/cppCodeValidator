@@ -1,118 +1,137 @@
 // utils/cppcheckRunner.js
 const { spawn } = require('child_process');
-const fs = require('fs');
+const fs = require('fs/promises');
 const path = require('path');
+const crypto = require('crypto');
 const config = require('../config/config');
 
 class CppcheckRunner {
   constructor() {
     this.cppcheckPath = config.CPPCHECK_PATH;
+    this.cachedVersion = null;
   }
 
   /**
-   * Run cppcheck on a file
-   * @param {string} filePath - Path to file to check
-   * @param {object} options - Cppcheck options
-   * @returns {Promise<object>} - Results object
+   * Run cppcheck on a File.
+   * @param {string} filePath - Path to the file to Check
+   * @param {object} options - { std }
+   * @returns {Promise<{exitCode: number, xml: string, stdout: string}>}
    */
   run(filePath, options = {}) {
     return new Promise((resolve, reject) => {
-      // Build arguments
+      const std = config.ALLOWED_STDS.includes(options.std)
+        ? options.std
+        : config.DEFAULT_STD;
+
       const args = [
         '--enable=all',
+        `--std=${std}`,
         '--suppress=missingIncludeSystem',
+        '--suppress=checkersReport',
         '--xml',
         '--xml-version=2',
         filePath
       ];
 
-      // Add custom arguments if provided
-      if (options.enable) {
-        args[0] = `--enable=${options.enable}`;
-      }
-      if (options.suppress) {
-        args.push(`--suppress=${options.suppress}`);
-      }
+      const child = spawn(this.cppcheckPath, args, { windowsHide: true });
 
-      // Spawn cppcheck process
-      const cppcheck = spawn(this.cppcheckPath, args);
+      let stdout = '';
+      let stderr = '';
+      let timedOut = false;
 
-      let xmlOutput = '';
-      let errorOutput = '';
-      let stdOutput = '';
+      child.stdout.on('data', (data) => { stdout += data.toString(); });
+      child.stderr.on('data', (data) => { stderr += data.toString(); });
 
-      // Capture output
-      cppcheck.stdout.on('data', (data) => {
-        stdOutput += data.toString();
-        if (data.toString().includes('<?xml')) {
-          xmlOutput += data.toString();
+      const timer = setTimeout(() => {
+        timedOut = true;
+        child.kill('SIGKILL');
+      }, config.ANALYSIS_TIMEOUT_MS);
+
+      child.on('error', (error) => {
+        clearTimeout(timer);
+        const err = new Error(
+          error.code === 'ENOENT'
+            ? `cppcheck was not found at "${this.cppcheckPath}". Install it or set CPPCHECK_PATH.`
+            : `Failed to execute cppcheck: ${error.message}`
+        );
+        err.notFound = error.code === 'ENOENT';
+        reject(err);
+      });
+
+      child.on('close', (code) => {
+        clearTimeout(timer);
+        if (timedOut) {
+          const err = new Error(
+            `Analysis exceeded the ${config.ANALYSIS_TIMEOUT_MS / 1000}s time limit`
+          );
+          err.timeout = true;
+          return reject(err);
         }
+        resolve({ exitCode: code, xml: stderr, stdout });
       });
-
-      cppcheck.stderr.on('data', (data) => {
-        errorOutput += data.toString();
-      });
-
-      // Handle process completion
-      cppcheck.on('close', (code) => {
-        resolve({
-          exitCode: code,
-          xml: xmlOutput,
-          stderr: errorOutput,
-          stdout: stdOutput,
-          success: code === 0
-        });
-      });
-
-      // Handle errors
-      cppcheck.on('error', (error) => {
-        reject({
-          message: 'Failed to execute cppcheck',
-          error: error.message
-        });
-      });
-
-      // Timeout after 30 seconds
-      setTimeout(() => {
-        cppcheck.kill();
-        reject({
-          message: 'Cppcheck timeout exceeded',
-          timeout: true
-        });
-      }, 30000);
     });
   }
 
   /**
-   * Create temporary file and run check
-   * @param {string} code - C++ code to check
-   * @param {string} fileName - File name
-   * @returns {Promise<object>}
+   * Write code to a temp file, run cppcheck, always Clean up.
+   * @param {string} code - C++ source to check
+   * @param {string} fileName - Display name (sanitized before use)
+   * @param {object} options - { std }
+   * @returns {Promise<{exitCode: number, xml: string, stdout: string, fileName: string}>}
    */
-  async checkCode(code, fileName = 'temp.cpp') {
-    const tempDir = config.TEMP_DIR;
-    
-    // Create temp directory if it doesn't exist
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
+  async checkCode(code, fileName = 'main.cpp', options = {}) {
+    const safeName = this.sanitizeFileName(fileName);
+    await fs.mkdir(config.TEMP_DIR, { recursive: true });
 
-    const tempFile = path.join(tempDir, `${Date.now()}_${fileName}`);
+    const tempFile = path.join(
+      config.TEMP_DIR,
+      `${crypto.randomBytes(8).toString('hex')}_${safeName}`
+    );
 
     try {
-      // Write code to temp file
-      fs.writeFileSync(tempFile, code, 'utf-8');
-
-      // Run cppcheck
-      const result = await this.run(tempFile);
-
-      return result;
+      await fs.writeFile(tempFile, code, 'utf-8');
+      const result = await this.run(tempFile, options);
+      return { ...result, fileName: safeName };
     } finally {
-      // Clean up temp file
-      if (fs.existsSync(tempFile)) {
-        fs.unlinkSync(tempFile);
-      }
+      await fs.unlink(tempFile).catch(() => {});
     }
+  }
+
+  sanitizeFileName(fileName) {
+    const base = path.basename(String(fileName)).replace(/[^\w.\-]/g, '_');
+    const ext = path.extname(base).toLowerCase();
+    if (!base || base.startsWith('.') || !config.ALLOWED_EXTENSIONS.includes(ext)) {
+      return 'main.cpp';
+    }
+    return base;
+  }
+
+  /**
+   * Get the Installed cppcheck Version (cached after first call).
+   * @returns {Promise<string>}
+   */
+  getVersion() {
+    if (this.cachedVersion) return Promise.resolve(this.cachedVersion);
+
+    return new Promise((resolve, reject) => {
+      const child = spawn(this.cppcheckPath, ['--version'], { windowsHide: true });
+      let output = '';
+
+      child.stdout.on('data', (data) => { output += data.toString(); });
+      child.on('error', (error) => {
+        const err = new Error(
+          error.code === 'ENOENT'
+            ? `cppcheck was not found at "${this.cppcheckPath}". Install it or set CPPCHECK_PATH.`
+            : error.message
+        );
+        err.notFound = error.code === 'ENOENT';
+        reject(err);
+      });
+      child.on('close', () => {
+        this.cachedVersion = output.trim();
+        resolve(this.cachedVersion);
+      });
+    });
   }
 }
 

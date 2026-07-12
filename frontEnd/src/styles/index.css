@@ -1,4 +1,28 @@
-/* src/index.css */
+:root {
+  --bg: #0f1115;
+  --panel: #151920;
+  --panel-2: #1b212b;
+  --line: #262d39;
+  --line-strong: #37404f;
+  --text: #e8ebf0;
+  --muted: #8b93a1;
+  --faint: #5e6673;
+
+  --sev-error: #ff6b5e;
+  --sev-warning: #ffb454;
+  --sev-style: #59c2ff;
+  --sev-performance: #7fd962;
+  --sev-portability: #d2a6ff;
+  --sev-information: #9aa5b5;
+  --ok: #7fd962;
+
+  --mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius: 8px;
+  --editor-line-height: 21px;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -13,23 +37,94 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--sans);
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 50%, #3d3d54 100%);
-  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
   overflow-x: hidden;
-  color: #e0e0e0;
 }
 
-code {
-  font-family: 'Courier New', 'Monaco', source-code-pro, Menlo, 'Courier New',
-    monospace;
+code,
+pre {
+  font-family: var(--mono);
 }
 
-/* Scrollbar styling */
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.panel-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: var(--panel-2);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-run {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+}
+
+.btn-run:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: var(--bg);
+}
+
+.btn-run:disabled {
+  opacity: 0.35;
+}
+
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -40,39 +135,24 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.3);
+  background: var(--line);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.5);
+  background: var(--line-strong);
 }
 
-/* Selection styling */
 ::selection {
-  background: rgba(139, 92, 246, 0.5);
-  color: #e0e0e0;
+  background: rgba(232, 235, 240, 0.22);
 }
 
-::-moz-selection {
-  background: rgba(139, 92, 246, 0.5);
-  color: #e0e0e0;
-}
-
-/* Button reset */
-button {
-  font-family: inherit;
-}
-
-/* Input reset */
-input,
-textarea,
-select {
-  font-family: inherit;
-}
-
-/* Link reset */
-a {
-  color: inherit;
-  text-decoration: none;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

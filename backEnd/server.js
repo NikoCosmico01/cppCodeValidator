@@ -1,36 +1,34 @@
 // server.js
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-require('dotenv').config();
 
 const config = require('./config/config');
 const checkRoutes = require('./routes/check');
 
 const app = express();
+app.disable('x-powered-by');
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: config.CORS_ORIGIN,
   credentials: true
 }));
 
-app.use(bodyParser.json({ limit: '5mb' }));
-app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
+app.use(express.json({ limit: config.MAX_CODE_SIZE + 65536 }));
 
-// Request logging middleware
+// Request logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
-// API Routes
+// API routes
 app.use('/api', checkRoutes);
 
-// Root endpoint
+// Root Endpoint
 app.get('/', (req, res) => {
   res.json({
-    name: 'Cppcheck API Server',
+    name: 'C++ Code Validator API',
     version: '1.0.0',
     endpoints: {
       check: 'POST /api/check',
@@ -40,25 +38,30 @@ app.get('/', (req, res) => {
   });
 });
 
-// 404 handler
+// 404 Handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
+  res.status(404).json({ success: false, message: 'Not found' });
 });
 
-// Error handler
+// Error Handler
 app.use((err, req, res, next) => {
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      success: false,
+      message: 'Request body exceeds the maximum size'
+    });
+  }
   console.error(err);
   res.status(500).json({
     success: false,
     message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: config.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
 // Start server
-const PORT = config.PORT;
-app.listen(PORT, () => {
-  console.log(`✓ Cppcheck API server running on port ${PORT}`);
+app.listen(config.PORT, () => {
+  console.log(`✓ C++ Code Validator API running on port ${config.PORT}`);
   console.log(`✓ Environment: ${config.NODE_ENV}`);
-  console.log(`✓ CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
+  console.log(`✓ CORS enabled for: ${config.CORS_ORIGIN}`);
 });

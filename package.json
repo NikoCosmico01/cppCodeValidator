@@ -1,25 +1,30 @@
 {
-  "name": "cpp-code-valdidator",
+  "name": "cpp-code-validator",
   "version": "1.0.0",
   "description": "Full-Stack C++ Code Validator with cppcheck Integration",
-  "main": "index.js",
   "private": true,
   "workspaces": [
     "backEnd",
     "frontEnd"
   ],
   "scripts": {
-    "install-all": "npm install && npm install --workspace=backEnd && npm install --workspace=frontEnd",
-    "dev": "npm run dev --workspace=backEnd & npm run dev --workspace=frontEnd",
-    "build": "npm run build --workspace=frontEnd && npm run build --workspace=backEnd",
+    "install-all": "npm install",
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev --workspace=backEnd\" \"npm run dev --workspace=frontEnd\"",
+    "dev:backend": "npm run dev --workspace=backEnd",
+    "dev:frontend": "npm run dev --workspace=frontEnd",
+    "build": "npm run build --workspace=frontEnd",
     "start": "npm start --workspace=backEnd",
-    "test": "npm test --workspace=backEnd && npm test --workspace=frontEnd",
+    "test": "npm test --workspace=backEnd",
     "lint": "npm run lint --workspace=backEnd && npm run lint --workspace=frontEnd"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
   },
   "keywords": [
     "cpp",
     "code-analyzer",
-    "cppcheck"
+    "cppcheck",
+    "static-analysis"
   ],
   "author": "Nicolò Thei",
   "license": "MIT"

@@ -1,96 +1,105 @@
-// controllers/checkController.js
-const cppcheckRunner = require('../utils/cppcheckRunner');
 const xml2js = require('xml2js');
+const cppcheckRunner = require('../utils/cppcheckRunner');
+const config = require('../config/config');
+
+const SEVERITIES = ['error', 'warning', 'style', 'performance', 'portability', 'information'];
+
+async function parseIssues(xml, displayName) {
+  if (!xml || !xml.includes('<results')) return [];
+
+  const parsed = await new xml2js.Parser().parseStringPromise(xml);
+  const errors = parsed?.results?.errors?.[0]?.error || [];
+
+  return errors.map((entry) => {
+    const attrs = entry.$ || {};
+    const location = entry.location?.[0]?.$ || {};
+    return {
+      id: attrs.id || 'unknown',
+      severity: SEVERITIES.includes(attrs.severity) ? attrs.severity : 'information',
+      message: attrs.msg || '',
+      verbose: attrs.verbose && attrs.verbose !== attrs.msg ? attrs.verbose : null,
+      cwe: attrs.cwe ? Number(attrs.cwe) : null,
+      file: location.file ? displayName : null,
+      line: location.line ? Number(location.line) : null,
+      column: location.column ? Number(location.column) : null
+    };
+  });
+}
+
+function summarize(issues) {
+  const summary = { total: issues.length };
+  for (const severity of SEVERITIES) {
+    const count = issues.filter((issue) => issue.severity === severity).length;
+    if (count > 0) summary[severity] = count;
+  }
+  return summary;
+}
 
 class CheckController {
-  /**
-   * Check C++ code
-   */
   async checkCode(req, res) {
     try {
-      const { code, fileName = 'main.cpp' } = req.body;
+      const { code, fileName = 'main.cpp', std } = req.body;
 
-      // Validate input
-      if (!code) {
+      if (typeof code !== 'string' || !code.trim()) {
         return res.status(400).json({
           success: false,
           message: 'Code is required'
         });
       }
 
-      if (code.length > 1048576) {
-        return res.status(400).json({
+      if (Buffer.byteLength(code, 'utf-8') > config.MAX_CODE_SIZE) {
+        return res.status(413).json({
           success: false,
-          message: 'Code exceeds maximum size (1MB)'
+          message: `Code exceeds the maximum size (${Math.round(config.MAX_CODE_SIZE / 1024)}KB)`
         });
       }
 
-      // Run cppcheck
-      const result = await cppcheckRunner.checkCode(code, fileName);
-
-      // Parse XML output
-      const parser = new xml2js.Parser();
-      let parsedResults = null;
-
-      if (result.xml) {
-        try {
-          parsedResults = await parser.parseStringPromise(result.xml);
-        } catch (parseError) {
-          console.error('XML parse error:', parseError);
-        }
+      if (std !== undefined && !config.ALLOWED_STDS.includes(std)) {
+        return res.status(400).json({
+          success: false,
+          message: `Unsupported standard "${std}". Allowed: ${config.ALLOWED_STDS.join(', ')}`
+        });
       }
 
-      // Format response
+      const result = await cppcheckRunner.checkCode(code, fileName, { std });
+      const issues = await parseIssues(result.xml, result.fileName);
+
       return res.json({
-        success: result.exitCode === 0,
+        success: true,
+        fileName: result.fileName,
+        std: std || config.DEFAULT_STD,
         exitCode: result.exitCode,
-        fileName: fileName,
-        results: {
-          raw: result.xml,
-          parsed: parsedResults,
-          errors: result.stderr
-        }
+        issues,
+        summary: summarize(issues),
+        raw: result.xml
       });
     } catch (error) {
-      console.error('Error in checkCode:', error);
-      return res.status(500).json({
+      console.error('Error in checkCode:', error.message);
+      const status = error.notFound ? 503 : error.timeout ? 504 : 500;
+      return res.status(status).json({
         success: false,
         message: error.message || 'Internal server error',
-        timeout: error.timeout || false
+        timeout: Boolean(error.timeout)
       });
     }
   }
 
-  /**
-   * Health check endpoint
-   */
   health(req, res) {
     res.json({
-      status: 'OK',
-      message: 'Cppcheck server is running'
+      status: 'ok',
+      uptime: Math.round(process.uptime())
     });
   }
 
-  /**
-   * Get cppcheck version
-   */
   async version(req, res) {
     try {
-      const { spawn } = require('child_process');
-      const cppcheck = spawn(require('../config/config').CPPCHECK_PATH, ['--version']);
-
-      let version = '';
-      cppcheck.stdout.on('data', (data) => {
-        version += data.toString();
-      });
-
-      cppcheck.on('close', () => {
-        res.json({
-          version: version.trim()
-        });
-      });
+      const version = await cppcheckRunner.getVersion();
+      res.json({ version });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(error.notFound ? 503 : 500).json({
+        success: false,
+        message: error.message
+      });
     }
   }
 }

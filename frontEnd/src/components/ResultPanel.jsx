@@ -1,97 +1,89 @@
 // src/components/ResultPanel.jsx
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, AlertCircle, CheckCircle } from 'lucide-react';
+import React from 'react';
+import { CheckCircle } from 'lucide-react';
 import '../styles/ResultPanel.css';
 
-function ResultPanel({ result }) {
-  const [expanded, setExpanded] = useState(true);
+const SEVERITY_ORDER = ['error', 'warning', 'performance', 'portability', 'style', 'information'];
 
+function ResultPanel({ result, onJumpToLine }) {
   if (!result) return null;
 
-  const hasErrors = result.results?.errors && result.results.errors.length > 0;
-  const hasRawOutput = result.results?.raw && result.results.raw.length > 0;
+  const issues = result.issues || [];
+  const summary = result.summary || { total: issues.length };
+  const clean = summary.total === 0;
+
+  const presentSeverities = SEVERITY_ORDER.filter((s) => summary[s] > 0);
 
   return (
-    <div className={`result-panel ${!hasErrors ? 'success' : 'warning'}`}>
-      <div
-        className="result-header"
-        onClick={() => setExpanded(!expanded)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            setExpanded(!expanded);
-          }
-        }}
-      >
-        <div className="header-content">
-          {!hasErrors ? (
-            <CheckCircle size={20} className="icon success" />
-          ) : (
-            <AlertCircle size={20} className="icon warning" />
-          )}
-          <h3>Analysis Results</h3>
-        </div>
-        <div className="header-actions">
-          <span className={`status ${!hasErrors ? 'success' : 'warning'}`}>
-            {!hasErrors ? '✓ No Issues Found' : '⚠ Issues Detected'}
+    <section className="result-panel" aria-label="Analysis results">
+      <div className="result-header">
+        <span className="panel-label">Diagnostics</span>
+        {clean ? (
+          <span className="clean-chip">
+            <CheckCircle size={14} />
+            clean
           </span>
-          {expanded ? (
-            <ChevronUp size={20} />
-          ) : (
-            <ChevronDown size={20} />
-          )}
-        </div>
+        ) : (
+          <div className="severity-chips">
+            {presentSeverities.map((severity) => (
+              <span key={severity} className={`sev-chip sev-${severity}`}>
+                {summary[severity]} {severity}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
-      {expanded && (
-        <div className="result-content">
-          <div className="result-info">
-            <div className="info-item">
-              <span className="label">Exit Code:</span>
-              <span className="value">{result.exitCode}</span>
-            </div>
-            <div className="info-item">
-              <span className="label">File:</span>
-              <span className="value">{result.fileName || 'N/A'}</span>
-            </div>
-          </div>
-
-          {hasErrors && (
-            <div className="result-section errors">
-              <h4>Errors & Warnings</h4>
-              <pre className="error-output">{result.results.errors}</pre>
-            </div>
-          )}
-
-          {hasRawOutput && (
-            <details className="result-section raw">
-              <summary>Raw XML Output</summary>
-              <pre className="raw-output">{result.results.raw}</pre>
-            </details>
-          )}
-
-          {!hasErrors && !hasRawOutput && (
-            <div className="result-section empty">
-              <p>✓ Code analysis completed successfully. No issues detected!</p>
-            </div>
-          )}
-
-          <div className="result-footer">
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  hasErrors ? result.results.errors : result.results.raw
-                );
-              }}
-              className="btn-copy"
-            >
-              Copy Results
-            </button>
-          </div>
+      {!clean && (
+        <div className="severity-spectrum" aria-hidden="true">
+          {presentSeverities.map((severity) => (
+            <span
+              key={severity}
+              className={`spectrum-segment sev-bg-${severity}`}
+              style={{ flexGrow: summary[severity] }}
+            />
+          ))}
         </div>
       )}
-    </div>
+
+      {clean ? (
+        <p className="clean-message">
+          No issues found — cppcheck came back clean for {result.fileName} ({result.std}).
+        </p>
+      ) : (
+        <ul className="diagnostics-list">
+          {issues.map((issue, index) => (
+            <li key={index}>
+              <button
+                type="button"
+                className="diagnostic-row"
+                onClick={() => issue.line && onJumpToLine?.(issue.line)}
+                disabled={!issue.line}
+                title={issue.verbose || undefined}
+              >
+                <span className="diag-location">
+                  {issue.file || result.fileName}
+                  {issue.line ? `:${issue.line}` : ''}
+                  {issue.column ? `:${issue.column}` : ''}:
+                </span>{' '}
+                <span className={`diag-severity sev-${issue.severity}`}>
+                  {issue.severity}:
+                </span>{' '}
+                <span className="diag-message">{issue.message}</span>{' '}
+                <span className="diag-id">[{issue.id}]</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {result.raw && (
+        <details className="raw-details">
+          <summary>Raw XML report</summary>
+          <pre>{result.raw}</pre>
+        </details>
+      )}
+    </section>
   );
 }
 
